@@ -24,6 +24,7 @@ import org.esigate.events.Event;
 import org.esigate.events.EventDefinition;
 import org.esigate.events.EventManager;
 import org.esigate.events.IEventListener;
+import org.esigate.events.impl.FetchEvent;
 import org.esigate.events.impl.RenderEvent;
 import org.esigate.http.IncomingRequest;
 import org.esigate.test.TestUtils;
@@ -83,8 +84,28 @@ public class APITest extends AbstractDriverTestCase {
                     return true;
                 }
             });
+            
+            
+            driver.getEventManager().register(EventManager.EVENT_FETCH_POST, new IEventListener() {
+
+                @Override
+                public boolean event(EventDefinition id, Event event) {
+                    FetchEvent revent = (FetchEvent) event;
+                    Assert.assertNotNull("httpResponse should not be null", revent.getHttpResponse());
+                    Assert.assertNotNull("request should not be null", revent.getHttpRequest());
+                    Assert.assertNotNull("context should not be null", revent.getHttpContext());
+                    return true;
+                }
+            });
 
         }
 
     }
+    
+    
+    
+  
+    
+ 
+    
 }
