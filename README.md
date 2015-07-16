@@ -14,7 +14,7 @@ It can be used to add application modules, written in any programming language (
 
 **Web accelerator** : Improved ESI tags to allow block-level caching of content for dynamic pages. Deliver dynamic, logged-in content in milli-seconds. Also deliver fully cached content.
 
-# Usage test
+# Usage 
 
 esigate can be used : 
 * as a standalone server
