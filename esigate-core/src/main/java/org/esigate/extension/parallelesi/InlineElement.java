@@ -42,9 +42,10 @@ class InlineElement extends BaseElement {
     }
 
     @Override
-    protected void parseTag(Tag tag, FutureParserContext ctx) {
+    protected boolean parseTag(Tag tag, FutureParserContext ctx) {
         this.uri = tag.getAttribute("name");
         this.fetchable = "yes".equalsIgnoreCase(tag.getAttribute("fetchable"));
+        return true;
     }
 
     @Override
@@ -54,7 +55,7 @@ class InlineElement extends BaseElement {
 
     @Override
     public void onTagEnd(String tag, FutureParserContext ctx) throws IOException {
-        String originalUrl = UriUtils.getPath(ctx.getHttpRequest().getRequestLine().getUri());
+        String originalUrl = UriUtils.getPath(ctx.getHttpRequest().getOriginalRequest().getRequestLine().getUri());
         try {
             InlineCache.storeFragment(uri, null, fetchable, originalUrl, buf.get().toString());
         } catch (ExecutionException e) {

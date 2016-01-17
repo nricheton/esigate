@@ -1,5 +1,4 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>org.sonatype.oss</groupId>
@@ -13,7 +12,7 @@
 	<artifactId>esigate</artifactId>
 	<packaging>pom</packaging>
 	<name>esigate</name>
-	<version>5.0-SNAPSHOT</version>
+	<version>5.2-SNAPSHOT</version>
 	<inceptionYear>2008</inceptionYear>
 	<mailingLists>
 		<mailingList>
@@ -48,9 +47,8 @@
 	<description>ESIGate - ESI reverse proxy, CMS integration, Remove
 		templating</description>
 	<issueManagement>
-		<system>MantisBT</system>
-		<url>https://sourceforge.net/apps/mantisbt/webassembletool/view_all_bug_page.php
-		</url>
+		<system>GitHub</system>
+		<url>https://github.com/esigate/esigate/issues</url>
 	</issueManagement>
 	<developers>
 		<developer>
@@ -107,12 +105,7 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-compiler-plugin</artifactId>
-					<version>3.1</version>
-					<configuration>
-						<source>1.7</source>
-						<target>1.7</target>
-						<encoding>UTF-8</encoding>
-					</configuration>
+					<version>3.3</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
@@ -197,17 +190,31 @@
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-war-plugin</artifactId>
-					<version>2.4</version>
+					<version>2.6</version>
+					<configuration>
+						<failOnMissingWebXml>false</failOnMissingWebXml>
+					</configuration>
 				</plugin>
 				<plugin>
 					<groupId>org.codehaus.cargo</groupId>
 					<artifactId>cargo-maven2-plugin</artifactId>
 					<version>1.4.9</version>
+					<configuration>
+						<container>
+							<containerId>jetty8x</containerId>
+							<type>embedded</type>
+							<systemProperties>
+								<org.eclipse.jetty.LEVEL>WARN</org.eclipse.jetty.LEVEL>
+								<org.slf4j.simpleLogger.logFile>System.out</org.slf4j.simpleLogger.logFile>
+								<org.slf4j.simpleLogger.defaultLogLevel>warn</org.slf4j.simpleLogger.defaultLogLevel>
+							</systemProperties>
+						</container>
+					</configuration>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-gpg-plugin</artifactId>
-					<version>1.4</version>
+					<version>1.5</version>
 				</plugin>
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
@@ -397,16 +404,6 @@
 			</dependency>
 			<dependency>
 				<groupId>org.esigate</groupId>
-				<artifactId>esigate-jsf</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.esigate</groupId>
-				<artifactId>esigate-wicket</artifactId>
-				<version>${project.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>org.esigate</groupId>
 				<artifactId>esigate-cas</artifactId>
 				<version>${project.version}</version>
 			</dependency>
@@ -475,31 +472,12 @@
 				<artifactId>esigate-server</artifactId>
 				<version>${project.version}</version>
 			</dependency>
-
-			<dependency>
-				<groupId>javax.servlet.jsp</groupId>
-				<artifactId>jsp-api</artifactId>
-				<version>2.0</version>
-				<scope>provided</scope>
-			</dependency>
 			<dependency>
 				<groupId>javax.servlet</groupId>
 				<artifactId>servlet-api</artifactId>
 				<version>2.4</version>
 				<scope>provided</scope>
 			</dependency>
-			<dependency>
-				<groupId>javax.faces</groupId>
-				<artifactId>jsf-api</artifactId>
-				<version>1.1_02</version>
-				<scope>provided</scope>
-			</dependency>
-			<dependency>
-				<groupId>javax.el</groupId>
-				<artifactId>el-api</artifactId>
-				<version>1.0</version>
-			</dependency>
-
 			<dependency>
 				<groupId>org.apache.httpcomponents</groupId>
 				<artifactId>httpclient</artifactId>
@@ -552,57 +530,58 @@
 			<dependency>
 				<groupId>org.slf4j</groupId>
 				<artifactId>slf4j-api</artifactId>
-				<version>1.7.5</version>
+				<version>1.7.7</version>
 			</dependency>
 			<dependency>
 				<groupId>org.slf4j</groupId>
 				<artifactId>jcl-over-slf4j</artifactId>
-				<version>1.7.5</version>
+				<version>1.7.7</version>
 				<scope>runtime</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.slf4j</groupId>
 				<artifactId>slf4j-simple</artifactId>
-				<version>1.7.5</version>
+				<version>1.7.7</version>
 				<scope>test</scope>
 			</dependency>
-			<dependency>
+            <dependency>
 				<groupId>org.slf4j</groupId>
 				<artifactId>slf4j-nop</artifactId>
-				<version>1.7.5</version>
+				<version>1.7.7</version>
 				<scope>test</scope>
 			</dependency>
-			<dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-log4j12</artifactId>
+                <version>1.7.7</version>
+                <scope>runtime</scope>
+            </dependency>
+            <dependency>
 				<groupId>log4j</groupId>
 				<artifactId>log4j</artifactId>
-				<version>1.2.16</version>
-				<scope>runtime</scope>
-			</dependency>
-			<dependency>
-				<groupId>org.slf4j</groupId>
-				<artifactId>slf4j-log4j12</artifactId>
-				<version>1.7.5</version>
+				<version>1.2.17</version>
 				<scope>runtime</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.apache.commons</groupId>
 				<artifactId>commons-lang3</artifactId>
-				<version>3.1</version>
+				<version>3.3.2</version>
 			</dependency>
 			<dependency>
-				<groupId>org.jasig.cas</groupId>
+				<groupId>org.jasig.cas.client</groupId>
 				<artifactId>cas-client-core</artifactId>
-				<version>3.1.8</version>
+				<version>3.4.1</version>
 				<scope>compile</scope>
+				<exclusions>
+					<!-- In order to avoid infinite loops between slf4j and log4j as we 
+						are using log4j in our test webapps -->
+					<exclusion>
+						<artifactId>log4j-over-slf4j</artifactId>
+						<groupId>org.slf4j</groupId>
+					</exclusion>
+				</exclusions>
 			</dependency>
-
-			<dependency>
-				<groupId>org.apache.wicket</groupId>
-				<artifactId>wicket</artifactId>
-				<version>1.4.7</version>
-			</dependency>
-
-			<dependency>
+            <dependency>
 				<groupId>opensymphony</groupId>
 				<artifactId>oscache</artifactId>
 				<version>2.4.1</version>
@@ -629,11 +608,7 @@
 				<scope>runtime</scope>
 			</dependency>
 
-			<dependency>
-				<groupId>com.sun.facelets</groupId>
-				<artifactId>jsf-facelets</artifactId>
-				<version>1.1.14</version>
-			</dependency>
+
 			<dependency>
 				<groupId>com.sun.el</groupId>
 				<artifactId>el-ri</artifactId>
@@ -685,7 +660,6 @@
 					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-gpg-plugin</artifactId>
-						<version>1.5</version>
 						<executions>
 							<execution>
 								<id>sign-artifacts</id>
@@ -734,6 +708,9 @@
 	</distributionManagement>
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<maven.compiler.source>1.7</maven.compiler.source>
+		<maven.compiler.target>1.7</maven.compiler.target>
+		<maven.compiler.optimize>true</maven.compiler.optimize>
 		<dependency.httpclient.version>4.3.5</dependency.httpclient.version>
 		<currentVersion>${project.version}</currentVersion>
 		<esigate-tool-conf.version>1.1</esigate-tool-conf.version>
