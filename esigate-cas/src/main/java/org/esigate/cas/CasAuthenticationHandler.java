@@ -30,100 +30,118 @@ import org.esigate.events.EventDefinition;
 import org.esigate.events.EventManager;
 import org.esigate.events.IEventListener;
 import org.esigate.events.impl.FragmentEvent;
+import org.esigate.events.impl.ProxyEvent;
 import org.esigate.extension.Extension;
 import org.esigate.http.IncomingRequest;
 import org.esigate.http.OutgoingRequest;
+import org.esigate.test.http.HttpResponseBuilder;
 import org.esigate.util.Parameter;
 import org.esigate.util.ParameterString;
 import org.jasig.cas.client.authentication.AttributePrincipal;
+import org.jasig.cas.client.util.CommonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class CasAuthenticationHandler implements IEventListener, Extension {
-    // Configuration properties names
-    public static final Parameter<String> CAS_LOGIN_URL = new ParameterString("casLoginUrl", "/login");
-    private static final Logger LOG = LoggerFactory.getLogger(CasAuthenticationHandler.class);
-    private Driver driver;
-    private String loginUrl;
+	// Configuration properties names
+	public static final Parameter<String> CAS_LOGIN_URL = new ParameterString("casLoginUrl", "/login");
+	private static final String H_CAS_MUST_LOGIN = "X-org.esigate.cas.mustLogin";
+	private static final Logger LOG = LoggerFactory.getLogger(CasAuthenticationHandler.class);
 
-    private void addCasAuthentication(OutgoingRequest outgoingRequest, IncomingRequest incomingRequest) {
-        String location = outgoingRequest.getRequestLine().getUri();
-        String resultLocation = location;
-        AttributePrincipal principal = getCasAuthentication(incomingRequest);
-        if (principal != null) {
-            LOG.debug("User logged in CAS as: " + principal.getName());
-            String casProxyTicket = principal.getProxyTicketFor(resultLocation);
-            LOG.debug("Proxy ticket retrieved: " + principal.getName() + " for service: " + location + " : "
-                    + casProxyTicket);
-            if (casProxyTicket != null) {
-                if (resultLocation.indexOf("?") > 0) {
-                    resultLocation = resultLocation + "&ticket=" + casProxyTicket;
-                } else {
-                    resultLocation = resultLocation + "?ticket=" + casProxyTicket;
-                }
-            }
-        }
-        outgoingRequest.setUri(resultLocation);
-    }
+	private Driver driver;
 
-    @Override
-    public boolean event(EventDefinition id, Event event) {
-        if (EventManager.EVENT_FRAGMENT_POST.equals(id)) {
-            FragmentEvent e = (FragmentEvent) event;
-            IncomingRequest incomingRequest = e.getOriginalRequest();
-            CloseableHttpResponse httpResponse = e.getHttpResponse();
-            if (isRedirectToCasServer(httpResponse)) {
-                if (getCasAuthentication(incomingRequest) != null) {
-                    LOG.debug("CAS authentication required for {}", e);
-                    EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
-                    e.setHttpResponse(null);
-                    addCasAuthentication(e.getHttpRequest(), e.getOriginalRequest());
-                    try {
-                        LOG.debug("Sending new request {}", e);
-                        e.setHttpResponse(this.driver.getRequestExecutor().execute(e.getHttpRequest()));
-                    } catch (HttpErrorPage e1) {
-                        e.setHttpResponse(e1.getHttpResponse());
-                    }
-                } else {
-                    LOG.debug("CAS authentication required but we are not authenticated for {}", e);
-                    e.setHttpResponse(HttpErrorPage.generateHttpResponse(HttpStatus.SC_UNAUTHORIZED,
-                            "CAS authentication required"));
-                }
-            }
-        }
-        return true;
-    }
+	private String loginUrl;
 
-    private AttributePrincipal getCasAuthentication(IncomingRequest incomingRequest) {
-        Principal principal = incomingRequest.getUserPrincipal();
-        if (principal != null && principal instanceof AttributePrincipal) {
-            return (AttributePrincipal) principal;
-        }
-        return null;
-    }
+	private void addCasAuthentication(OutgoingRequest outgoingRequest, IncomingRequest incomingRequest) {
+		String location = outgoingRequest.getRequestLine().getUri();
+		String resultLocation = location;
+		AttributePrincipal principal = getCasAuthentication(incomingRequest);
+		if (principal != null) {
+			LOG.debug("User logged in CAS as: " + principal.getName());
+			String casProxyTicket = principal.getProxyTicketFor(resultLocation);
+			LOG.debug("Proxy ticket retrieved: " + principal.getName() + " for service: " + location + " : "
+					+ casProxyTicket);
+			if (casProxyTicket != null) {
+				if (resultLocation.indexOf("?") > 0) {
+					resultLocation = resultLocation + "&ticket=" + casProxyTicket;
+				} else {
+					resultLocation = resultLocation + "?ticket=" + casProxyTicket;
+				}
+			}
+		}
+		outgoingRequest.setUri(resultLocation);
+	}
 
-    /*
-     * (non-Javadoc)
-     * 
-     * @see org.esigate.extension.Extension#init(org.esigate.Driver, java.util.Properties)
-     */
-    @Override
-    public final void init(Driver d, Properties properties) {
-        this.driver = d;
-        this.driver.getEventManager().register(EventManager.EVENT_FRAGMENT_PRE, this);
-        this.driver.getEventManager().register(EventManager.EVENT_FRAGMENT_POST, this);
-        loginUrl = CAS_LOGIN_URL.getValue(properties);
-    }
+	@Override
+	public boolean event(EventDefinition id, Event event) {
+		if (EventManager.EVENT_FRAGMENT_POST.equals(id)) {
+			FragmentEvent e = (FragmentEvent) event;
+			IncomingRequest incomingRequest = e.getOriginalRequest();
+			CloseableHttpResponse httpResponse = e.getHttpResponse();
+			if (isRedirectToCasServer(httpResponse)) {
+				if (getCasAuthentication(incomingRequest) != null) {
+					LOG.debug("CAS authentication required for {}", e);
+					EntityUtils.consumeQuietly(e.getHttpResponse().getEntity());
+					e.setHttpResponse(null);
+					addCasAuthentication(e.getHttpRequest(), e.getOriginalRequest());
+					try {
+						LOG.debug("Sending new request {}", e);
+						e.setHttpResponse(this.driver.getRequestExecutor().execute(e.getHttpRequest()));
+					} catch (HttpErrorPage e1) {
+						e.setHttpResponse(e1.getHttpResponse());
+					}
+				} else {
+					LOG.debug("CAS authentication required but we are not authenticated for {}", e);
+					incomingRequest.addHeader(H_CAS_MUST_LOGIN, "true");
+				}
+			}
+		} else if (EventManager.EVENT_PROXY_POST.equals(id)) {
+			ProxyEvent e = (ProxyEvent) event;
 
-    private boolean isRedirectToCasServer(HttpResponse httpResponse) {
-        Header locationHeader = httpResponse.getFirstHeader("Location");
-        if (locationHeader != null) {
-            String locationHeaderValue = locationHeader.getValue();
-            if (locationHeaderValue != null && locationHeaderValue.contains(loginUrl)) {
-                return true;
-            }
-        }
-        return false;
-    }
+			// If request is flagged as MUST LOGIN, redirect to CAS.
+			if (e.getOriginalRequest().containsHeader(H_CAS_MUST_LOGIN)) {
+				IncomingRequest incomingRequest = e.getOriginalRequest();
+				final String urlToRedirectTo = CommonUtils.constructRedirectUrl(loginUrl, "service",
+						incomingRequest.getRequestLine().getUri(), false, false);
+
+				e.setResponse(new HttpResponseBuilder().status(HttpStatus.SC_MOVED_TEMPORARILY)
+						.header("Location", urlToRedirectTo).build());
+			}
+		}
+		return true;
+	}
+
+	private AttributePrincipal getCasAuthentication(IncomingRequest incomingRequest) {
+		Principal principal = incomingRequest.getUserPrincipal();
+		if (principal != null && principal instanceof AttributePrincipal) {
+			return (AttributePrincipal) principal;
+		}
+		return null;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 *
+	 * @see org.esigate.extension.Extension#init(org.esigate.Driver,
+	 * java.util.Properties)
+	 */
+	@Override
+	public final void init(Driver d, Properties properties) {
+		this.driver = d;
+		this.driver.getEventManager().register(EventManager.EVENT_FRAGMENT_POST, this);
+		this.driver.getEventManager().register(EventManager.EVENT_PROXY_POST, this);
+		loginUrl = CAS_LOGIN_URL.getValue(properties);
+	}
+
+	private boolean isRedirectToCasServer(HttpResponse httpResponse) {
+		Header locationHeader = httpResponse.getFirstHeader("Location");
+		if (locationHeader != null) {
+			String locationHeaderValue = locationHeader.getValue();
+			if (locationHeaderValue != null && locationHeaderValue.contains(loginUrl)) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 }
