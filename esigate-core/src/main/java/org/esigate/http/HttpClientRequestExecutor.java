@@ -16,6 +16,8 @@
 package org.esigate.http;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -231,6 +233,17 @@ public final class HttpClientRequestExecutor implements RequestExecutor {
             if (preserveHost) {
                 // Preserve host if required
                 HttpHost virtualHost = HttpRequestHelper.getHost(originalRequest.getOriginalRequest());
+
+                try {
+                    InetAddress hostAddress = InetAddress.getByName(physicalHost.getHostName());
+                    physicalHost =
+                            new HttpHost(InetAddress.getByAddress(virtualHost.getHostName(), hostAddress.getAddress()), physicalHost.getPort(), physicalHost.getSchemeName());
+                } catch (UnknownHostException e) {
+                    LOG.warn("Unable to setup request with preserveHost : the provider host '{}' cannot be resolved. "
+                            + "This is likely a configuration issue : the request will fail anyway.",
+                            physicalHost.getHostName());
+                }
+
                 // Rewrite the uri with the virtualHost
                 uri = UriUtils.rewriteURI(uri, virtualHost);
             } else {
