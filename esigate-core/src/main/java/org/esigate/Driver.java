@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Properties;
 
 import org.apache.commons.io.output.StringBuilderWriter;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.http.HttpEntity;
@@ -48,6 +49,7 @@ import org.esigate.http.OutgoingRequest;
 import org.esigate.http.ResourceUtils;
 import org.esigate.impl.DriverRequest;
 import org.esigate.impl.UrlRewriter;
+import org.esigate.util.UriUtils;
 import org.esigate.vars.VariablesResolver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,6 +102,7 @@ public final class Driver {
                             .setProperties(properties).setContentTypeHelper(driver.contentTypeHelper).build();
             driver.urlRewriter = urlRewriter;
             driver.headerManager = new HeaderManager(urlRewriter);
+
             return driver;
         }
 
@@ -170,6 +173,7 @@ public final class Driver {
 
         String cacheKey = CACHE_RESPONSE_PREFIX + targetUrl;
         Pair<String, CloseableHttpResponse> cachedValue = incomingRequest.getAttribute(cacheKey);
+
         // content and response were not in cache
         if (cachedValue == null) {
             OutgoingRequest outgoingRequest = requestExecutor.createOutgoingRequest(driverRequest, targetUrl, false);
@@ -184,11 +188,15 @@ public final class Driver {
                     EntityUtils.consumeQuietly(response.getEntity());
 
                     redirects--;
-                    outgoingRequest =
-                            requestExecutor.createOutgoingRequest(
-                                    driverRequest,
-                                    redirectStrategy.getLocationURI(outgoingRequest, response,
-                                            outgoingRequest.getContext()).toString(), false);
+
+                    // Pick the location header, and take only the path to keeping the original route. 
+                    resultingPageUrl = UriUtils.getPath(
+                            redirectStrategy.getLocationURI(outgoingRequest, response, outgoingRequest.getContext())
+                                    .toString());
+                    targetUrl = ResourceUtils.getHttpUrlWithQueryString(resultingPageUrl, driverRequest, false);
+
+                    // Perform new request
+                    outgoingRequest = requestExecutor.createOutgoingRequest(driverRequest, targetUrl, false);
                     headerManager.copyHeaders(driverRequest, outgoingRequest);
                     response = requestExecutor.execute(outgoingRequest);
                 }
